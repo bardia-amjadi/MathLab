@@ -1,0 +1,152 @@
+PASS 2 + 3 ? 4 = 14
+PASS (2 + 3) ? 4 = 20
+PASS ascii operators and unicode minus/divide
+PASS unary minus and exponent precedence
+PASS nested parentheses and auto-closing
+PASS decimal input is exact
+PASS 1 / 2 exact vs decimal
+PASS factorial
+PASS sqrt(9)=3, 2^3=8
+PASS unicode constants and exponent literal
+PASS exact roots
+PASS division of surds is rationalised
+PASS percent semantics
+PASS implicit multiplication binds like '*'
+PASS scientific notation 1230000
+PASS scientific notation 0.0000045
+PASS scientific huge/small without crashing
+PASS decimal mode marks approximations
+PASS decimal never rounds a nonzero value to zero
+PASS exact mode keeps symbols
+PASS exact mode of an irrational transcendental shows approximation
+PASS big integers stay exact
+PASS scientific of exact rational shows approx flag only when rounded
+PASS degree trig exact special angles
+PASS radian trig respects angle mode
+PASS inverse trig exact and mode-dependent
+PASS logarithms
+PASS statistics and number theory
+PASS delta function
+PASS syntax errors are reported, not thrown as crashes
+PASS domain errors
+PASS undefined names
+PASS free variables in numeric context are kept symbolic (non-linear stays an expression)
+PASS variables: a = 5 then a + 2 = 7
+PASS functions: f(x) = x^2 + 1, f(3) = 10
+PASS multi-argument and composed functions
+PASS functions use workspace variables at call time
+PASS name collisions and overwrite policy
+PASS definition validation: undefined variables, unknown functions, circularity
+PASS deleting something in use is blocked; deleting unused works
+PASS persistence round trip (restore from stored text)
+PASS ans holds the previous numeric result
+PASS multi-letter names and implicit products
+PASS x + 3 = 5 -> x = 2
+PASS x^2 - 5x + 6 = 0 -> x = 2, x = 3 (with delta)
+PASS quadratic with no real roots reports it
+PASS quadratic repeated root
+PASS quadratic irrational roots stay exact
+PASS quadratic with rational (fractional) roots
+PASS decimal mode formats roots
+PASS linear equations
+PASS degenerate and special equations
+PASS quad() tool: delta, roots, vertex, degenerate a = 0
+PASS cubic and quartic equations
+PASS equations use saved variables and functions
+PASS equations: solve(eq, var) and solve(expr)
+PASS unsupported equations are rejected, not fabricated
+PASS numeric truth values
+PASS x^2 - 4 < 0 -> -2 < x < 2
+PASS quadratic inequality variants
+PASS linear inequality and sign flip
+PASS all / none / single point / excluded point
+PASS cubic inequality with several intervals
+PASS irrational boundaries stay exact
+PASS inequality via solve()
+PASS inequality with both sides polynomial
+PASS 2x2 unique solution
+PASS 3x3 unique solution
+PASS fractional solution
+PASS inconsistent system
+PASS underdetermined system
+PASS systems reject non-linear input
+PASS saved variables are substituted in systems
+PASS free-variable expressions are expanded
+PASS expand / simplify
+PASS factor
+PASS eval under conditions
+PASS commands cannot hide inside expressions
+PASS compile f(x) = x^2 and sample a single parabola
+PASS y = ..., bare expressions and saved functions
+PASS trig graph respects angle mode
+PASS asymptotes and invalid regions produce gaps, not misleading lines
+PASS invalid graph input is rejected with errors, never crashes
+PASS annotations: f(x) = x^2 - 4 has roots ?2, vertex (0,-4)
+PASS annotations: irrational roots computed, non-polynomials have none
+PASS auto viewport contains the interesting points
+PASS viewport pan and zoom keep the focus point fixed
+PASS ticks and labels
+PASS Editor.fraction: numerator from number, name or group; function names are not numerators
+PASS Pretty shows simple fraction templates as a?b
+PASS insert, cursor movement and backspace
+PASS backspace removes whole function tokens, clear entry removes whole entries
+PASS negate key toggles sign of the number before the cursor
+PASS pretty preview
+PASS live preview is side-effect free and only for numeric input
+PASS expensive calculations are refused instead of freezing
+PASS evaluation deadline is enforced
+PASS recursion limits for user functions are enforced
+PASS rational arithmetic invariants
+PASS quadratic roots are consistent with delta for many coefficient sets
+PASS random polynomial equations: exact roots satisfy the equation
+PASS linear expression without notation becomes f(x)
+PASS y = ... gets function notation; next free name is used
+PASS works with another variable letter and fractions
+PASS non-linear and multi-variable expressions are not rewritten
+PASS equations and plain numbers are untouched
+PASS if y is a variable it is not treated as notation
+PASS ? gives both results
+PASS ? errors and restrictions
+PASS non-polynomial powers become functions instead of an error
+PASS x^1.1 graphs: real for x >= 0, a gap (NaN) for x < 0
+PASS clear message for symbolic tools with fractional powers
+PASS arith/geom functions
+PASS seq detects geometric
+PASS seq detects arithmetic with formula 2n + 1
+PASS seq: converging geometric reports infinite sum, fractions allowed
+PASS seq: quadratic and Fibonacci patterns
+PASS seq errors
+PASS seq pattern formulas reproduce the given terms
+PASS every listed identity is true (verified by the engine)
+PASS every example command in the reference actually runs
+PASS expand names the special product
+PASS factor handles squares and cubes identities
+PASS circle, rectangle, triangle
+PASS Heron gives exact surds
+PASS right triangle, trapezoid, rhombus, square diagonal
+PASS solids
+PASS sector, ellipse, regular polygons
+PASS geometry input errors
+PASS evalValue for tool inputs
+PASS unit circle exact values at special angles
+PASS unit circle satisfies sin? + cos? = 1 for every special angle
+PASS statistics
+PASS 4 < 2 + x < 6 gives 2 < x < 4
+PASS closed, mixed and one-sided chains
+PASS quadratic chain: 1 < x^2 < 4 gives two intervals
+PASS chain with no solution, and numeric chains
+PASS chain errors
+PASS derivatives: exact text for polynomials and common cases
+PASS derivatives agree with central differences (RAD and DEG, many function shapes)
+PASS integrals: antiderivative differentiates back to the integrand
+PASS definite integrals: exact and numeric
+PASS calculus errors
+PASS number theory commands
+PASS big semiprime factors via Pollard rho
+PASS number bases
+PASS matrices: determinant, inverse, product, rank, transpose
+PASS matrix errors
+PASS every Home-page example runs without an error
+PASS unit conversion is exact
+
+150/150 passed

@@ -1,0 +1,35 @@
+[
+  {
+    "slug": "power-math",
+    "name": "Power Math",
+    "description": "An offline scientific calculator for Android with exact fractions, equation and inequality solving (including chained comparisons), calculus, graphing, matrices, unit conversion and saved variables.",
+    "category": "Education",
+    "type": "App",
+    "status": "In development",
+    "featured": false,
+    "logo": "logo_powermath.png",
+    "image": "",
+    "screenshots": [],
+    "video": "",
+    "version": "1.2",
+    "releaseDate": "2026-10-25",
+    "platforms": ["Android"],
+    "features": [
+      "Exact fractions, roots and multiples of pi",
+      "Decimal and scientific result modes",
+      "Equations, inequalities and chained comparisons such as 4 < 2 + x < 6",
+      "Linear systems, expand, simplify and factor",
+      "Derivatives and integrals (exact when possible)",
+      "Interactive graphing",
+      "Matrices, unit conversion, primes and number bases",
+      "Unit circle, geometric shapes, charts, sequences and algebraic identities",
+      "Saved variables and functions, history",
+      "Letter keyboard with Greek letters",
+      "Home page, accent colours, animations and many settings",
+      "Fully offline, no ads, no tracking"
+    ],
+    "requirements": "Android 8.0 (API 26) or newer",
+    "downloads": [],
+    "links": { "source": "https://github.com/bardia-amjadi/PowerMath" }
+  }
+]

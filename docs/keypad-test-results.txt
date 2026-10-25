@@ -1,0 +1,27 @@
+PASS letter keyboard: every page is a full 6x5 grid with working keys
+PASS letter keyboard: all 26 letters are reachable and every key is lexable
+PASS letter keyboard: Greek letters are valid, unreserved variable names
+PASS letter keyboard: page key cycles through all pages and the ABC state is separate from Shift/Alt/Ctrl
+PASS typing with letters: a, b, x, ? give a working equation
+PASS fraction key: 3 a?b 4 = 3/4, and ? ? hop over the divider
+PASS fraction key with an empty editor gives an empty template; adding fractions works
+PASS every modifier combination yields a full 6x5 grid
+PASS the 8 modifier combinations are all distinct layers with distinct names
+PASS no decorative keys: every visible key has a working action and a description
+PASS every inserted token is lexable by the shared lexer
+PASS insert then backspace restores the editor for every key
+PASS standard layer: digits 0-9 and all required keys
+PASS Alt layer: x, y, z and a?g variable keys, symbols
+PASS Shift layer: advanced functions with real engine function names
+PASS Ctrl layer: workspace actions are dialogs, plus quick-insert for saved names
+PASS Ctrl+Alt layer: equation, inequality, quadratic, system, simplify, expand, factor, evaluate, graph
+PASS Shift+Ctrl and Ctrl+Shift+Alt layers expose extra tools
+PASS modifier toggling does not touch the expression
+PASS keypad drives the engine: 2 + 3 ? 4 = 14, (2+3)?4 = 20
+PASS keypad: 1 ? 2 in each result mode
+PASS keypad: 1230000 scientific; 0.0000045 scientific
+PASS keypad: ? then 9 closes automatically and gives 3; ? key; negative key; power key
+PASS keypad with modifiers: Shift sin, Alt x, '=' key solves
+PASS keypad: quadratic  x^2 - 5x + 6 = 0 typed through the keys
+
+25/25 passed
