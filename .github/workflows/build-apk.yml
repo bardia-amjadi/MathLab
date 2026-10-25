@@ -25,6 +25,9 @@ jobs:
       - name: Make wrapper executable
         run: chmod +x gradlew
 
+      - name: Unit tests (math core + keypad logic)
+        run: ./gradlew :core:test :app:testDebugUnitTest --stacktrace
+
       - name: Build release APK
         run: ./gradlew :app:assembleRelease --stacktrace
 
