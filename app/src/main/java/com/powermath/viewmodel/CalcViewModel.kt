@@ -102,6 +102,8 @@ class CalcViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var dialog by mutableStateOf<DialogRequest?>(null)
     var toast by mutableStateOf<String?>(null)
+    /** Photo scanning flow (see ScanHost). */
+    var scan by mutableStateOf<ScanState>(ScanState.None)
 
     var wsVars by mutableStateOf<List<VarDef>>(emptyList())
         private set

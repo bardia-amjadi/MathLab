@@ -103,6 +103,8 @@ fun HomeScreen(vm: CalcViewModel) {
                     Text("MathLab", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text("Exact math. Fully offline.", fontSize = 12.sp, color = cs.onSurfaceVariant)
                 }
+                Chip("Scan", { vm.scan = com.powermath.viewmodel.ScanState.Choose }, desc = "Scan an expression from a photo")
+                Spacer(Modifier.size(6.dp))
                 Chip("Settings", { vm.screen = Screen.SETTINGS }, desc = "Open settings")
             }
         }
@@ -116,7 +118,7 @@ fun HomeScreen(vm: CalcViewModel) {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Type anything", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                        Text("2x + 3 = 11   ·   4 < 2 + x < 6   ·   diff(x^3, x)", fontSize = 12.sp, maxLines = 2)
+                        Text("2x + 3 = 11   ·   4 < 2 + x < 6   ·   or scan a photo", fontSize = 12.sp, maxLines = 2)
                     }
                     Text("→", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 }

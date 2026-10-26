@@ -25,7 +25,10 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
 
     // ---------------- equations ----------------
     fun solveEquation(l: Expr, r: Expr, prefer: String? = null): Outcome {
-        val diff = poly(l, r)
+        val diff = try { poly(l, r) } catch (e: MathError) {
+            if (e.kind == ErrorKind.UNSUPPORTED && hasVarDivision(l, r)) return solveRationalEquation(l, r, prefer)
+            throw e
+        }
         val v = pickVar(diff, prefer)
         if (v == null) {
             return if (diff.constantValue().isZero)
@@ -108,7 +111,10 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
 
     fun solveInequality(op: RelOp, l: Expr, r: Expr, prefer: String? = null): Outcome {
         if (op == RelOp.EQ) return solveEquation(l, r, prefer)
-        val diff = poly(l, r)
+        val diff = try { poly(l, r) } catch (e: MathError) {
+            if (e.kind == ErrorKind.UNSUPPORTED && hasVarDivision(l, r)) return solveRationalInequality(op, l, r, prefer)
+            throw e
+        }
         val v = pickVar(diff, prefer)
         if (v == null) {
             val s = diff.constantValue().signum
@@ -157,6 +163,138 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
         return Outcome(OutcomeKind.SOLUTION, lines, steps, graphExpr = u.toM(v).toText())
     }
 
+    // ---------------- rational expressions: variables in denominators ----------------
+    private fun hasVarDivision(vararg es: Expr): Boolean {
+        fun walk(e: Expr): Boolean = when (e) {
+            is Expr.Bin -> (e.op == '/' && ExprUtil.freeVars(e.r).any { scope.variable(it) == null }) ||
+                (e.op == '^' && e.r is Expr.Neg) || walk(e.l) || walk(e.r)
+            is Expr.Neg -> walk(e.e)
+            is Expr.Percent -> walk(e.e)
+            is Expr.Call -> e.args.any { walk(it) }
+            else -> false
+        }
+        return es.any { walk(it) }
+    }
+
+    /** Numerator and denominator of l - r as polynomials. */
+    private fun fraction(l: Expr, r: Expr): Pair<MPoly, MPoly> {
+        val (ln, ld) = frac(l); val (rn, rd) = frac(r)
+        return Pair(ln * rd - rn * ld, ld * rd)
+    }
+
+    private fun frac(e: Expr): Pair<MPoly, MPoly> {
+        val one = MPoly.const(Rat.ONE)
+        return when {
+            e is Expr.Neg -> frac(e.e).let { Pair(-it.first, it.second) }
+            e is Expr.Bin && e.op == '/' -> {
+                val (a, b) = frac(e.l); val (c, d) = frac(e.r)
+                if (c.isZero) throw MathError(ErrorKind.DIV_ZERO, "Division by zero")
+                Pair(a * d, b * c)
+            }
+            e is Expr.Bin && (e.op == '+' || e.op == '-') && e.r !is Expr.Percent -> {
+                val (a, b) = frac(e.l); val (c, d) = frac(e.r)
+                if (e.op == '+') Pair(a * d + c * b, b * d) else Pair(a * d - c * b, b * d)
+            }
+            e is Expr.Bin && e.op == '*' -> { val (a, b) = frac(e.l); val (c, d) = frac(e.r); Pair(a * c, b * d) }
+            e is Expr.Bin && e.op == '^' -> {
+                val k = try { builder.build(e.r) } catch (ex: MathError) { null }
+                if (k == null || !k.isConstant || !k.constantValue().isInteger || k.constantValue().num.bitLength() > 6)
+                    throw MathError(ErrorKind.UNSUPPORTED, "Powers in fractions must be whole numbers")
+                val n = k.constantValue().num.toInt()
+                val (a, b) = frac(e.l)
+                if (n >= 0) Pair(a.pow(n), b.pow(n)) else { if (a.isZero) throw MathError(ErrorKind.DIV_ZERO, "Division by zero"); Pair(b.pow(-n), a.pow(-n)) }
+            }
+            else -> Pair(builder.build(e), one)
+        }
+    }
+
+    private fun pickVarN(vs: Set<String>, prefer: String?): String? {
+        if (prefer != null) {
+            if (vs.isEmpty()) return null
+            if (vs == setOf(prefer)) return prefer
+            throw MathError(ErrorKind.UNSUPPORTED, "Cannot solve for '$prefer': the equation contains ${vs.joinToString(", ")}.")
+        }
+        return when (vs.size) {
+            0 -> null
+            1 -> vs.first()
+            else -> throw MathError(ErrorKind.UNSUPPORTED, "Several unknowns (${vs.joinToString(", ")}). Assign values to all but one variable.")
+        }
+    }
+
+    private fun zeroAt(d: UPoly, value: Value): Boolean =
+        if (value is Value.Q) d.eval(value.r).isZero else Math.abs(d.evalD(Ops.toDouble(value))) < 1e-9 * (1.0 + Math.abs(Ops.toDouble(value)))
+
+    fun solveRationalEquation(l: Expr, r: Expr, prefer: String? = null): Outcome {
+        val (n, d) = fraction(l, r)
+        val v = pickVarN(n.vars() + d.vars(), prefer) ?: throw MathError(ErrorKind.UNSUPPORTED, "Nothing to solve for")
+        if (d.vars().isEmpty() && n.vars().isEmpty()) throw MathError(ErrorKind.UNSUPPORTED, "Nothing to solve for")
+        val un = UPoly.fromM(n, v); val ud = UPoly.fromM(d, v)
+        val steps = arrayListOf("Multiply through by the denominators: ${un.toM(v).toText()} = 0", "Excluded values (a denominator would be 0): ${if (ud.degree == 0) "none" else ud.toM(v).toText() + " = 0"}")
+        val inner = solveUnivariate(un, v)
+        val out = ArrayList<Line>()
+        var removed = 0
+        for (line in inner.lines) {
+            if (line is Line.Eq && zeroAt(ud, line.value)) { removed++; steps.add("$v = ${fx(line.value)} makes a denominator 0, so it is rejected") } else out.add(line)
+        }
+        val kept = out.any { it is Line.Eq }
+        val lines: List<Line> = when {
+            un.isZero -> listOf(Line.Text("True for every real $v except where a denominator is 0"))
+            removed > 0 && !kept -> listOf(Line.Text("No solution: every candidate makes a denominator 0"))
+            removed > 0 -> out.filter { !(it is Line.Text && (it.text.startsWith("Δ") || it.text.startsWith("Complex"))) }
+            else -> out
+        }
+        return Outcome(OutcomeKind.SOLUTION, lines, steps + inner.steps.drop(0), graphExpr = null)
+    }
+
+    fun solveRationalInequality(op: RelOp, l: Expr, r: Expr, prefer: String? = null): Outcome {
+        val (n, d) = fraction(l, r)
+        val v = pickVarN(n.vars() + d.vars(), prefer)
+        if (v == null) {
+            val s = n.constantValue().signum * d.constantValue().signum
+            return Outcome(OutcomeKind.SOLUTION, listOf(Line.Text(if (satisfied(op, s)) "True for every real value" else "No solution: the inequality is false")))
+        }
+        val un = UPoly.fromM(n, v); val ud = UPoly.fromM(d, v)
+        val steps = arrayListOf("Move everything to one side and combine into one fraction: (${un.toM(v).toText()}) / (${ud.toM(v).toText()}) ${op.symbol} 0")
+        val rn = if (un.isZero) emptyList() else PolyRoots.realRoots(un)
+        val rd = if (ud.degree <= 0) emptyList() else PolyRoots.realRoots(ud)
+        steps.add("The sign can only change at roots of the numerator or the denominator; denominator roots are always excluded")
+        // merge critical points
+        class Crit(val value: Value, val d: Double, val isDen: Boolean)
+        val all = (rn.map { Crit(it.value, it.d, false) } + rd.map { Crit(it.value, it.d, true) }).sortedBy { it.d }
+        val crit = ArrayList<Crit>()
+        for (c in all) {
+            val last = crit.lastOrNull()
+            if (last != null && Math.abs(last.d - c.d) < 1e-12 * (1 + Math.abs(c.d))) { if (c.isDen && !last.isDen) { crit.removeAt(crit.size - 1); crit.add(c) } }
+            else crit.add(c)
+        }
+        val k = crit.size
+        fun signAt(x: Double): Int { val a = un.evalD(x); val b = ud.evalD(x); val q = a / b; return if (q > 0) 1 else if (q < 0) -1 else 0 }
+        val sat = ArrayList<Boolean>()
+        for (i in 0..k) {
+            val sample = when { k == 0 -> 0.0; i == 0 -> crit[0].d - 1.0; i == k -> crit[k - 1].d + 1.0; else -> (crit[i - 1].d + crit[i].d) / 2.0 }
+            sat.add(satisfied(op, signAt(sample)))
+            if (i < k) sat.add(!crit[i].isDen && satisfied(op, 0))
+        }
+        val ivs = ArrayList<Line.Iv>()
+        var e = 0
+        while (e < sat.size) {
+            if (!sat[e]) { e++; continue }
+            val start = e
+            while (e + 1 < sat.size && sat[e + 1]) e++
+            val end = e
+            val lo: Value? = if (start == 0) null else crit[if (start % 2 == 0) start / 2 - 1 else (start - 1) / 2].value
+            val hi: Value? = if (end == sat.size - 1) null else crit[if (end % 2 == 0) end / 2 else (end - 1) / 2].value
+            ivs.add(Line.Iv(lo, start % 2 == 1, hi, end % 2 == 1))
+            e++
+        }
+        val lines: List<Line> = when {
+            ivs.isEmpty() -> listOf(Line.Text("No real solutions"))
+            ivs.size == 1 && ivs[0].lo == null && ivs[0].hi == null -> listOf(Line.Text("All real numbers"))
+            else -> listOf(Line.IntervalSet(v, ivs))
+        }
+        return Outcome(OutcomeKind.SOLUTION, lines, steps)
+    }
+
     // ---------------- chained comparisons: 4 < 2 + x < 6 ----------------
     private fun cmpBound(a: Value, b: Value) = Ops.compare(a, b)
 
@@ -192,7 +330,11 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
 
     fun solveChain(terms: List<Expr>, ops: List<RelOp>, labels: List<String>, prefer: String? = null): Outcome {
         if (ops.any { it == RelOp.EQ }) throw MathError(ErrorKind.UNSUPPORTED, "A chain can use <, ≤, >, ≥ and ≠. For equalities write separate equations.")
-        val vars = (0 until ops.size).flatMap { poly(terms[it], terms[it + 1]).vars() }.toSortedSet()
+        val vars = (0 until ops.size).flatMap { i ->
+            try { poly(terms[i], terms[i + 1]).vars() } catch (e: MathError) {
+                if (e.kind == ErrorKind.UNSUPPORTED && hasVarDivision(terms[i], terms[i + 1])) { val (n, d) = fraction(terms[i], terms[i + 1]); n.vars() + d.vars() } else throw e
+            }
+        }.toSortedSet()
         var v = prefer ?: vars.firstOrNull()
         if (prefer == null && vars.size > 1) throw MathError(ErrorKind.UNSUPPORTED, "A chained comparison needs one unknown, but it contains ${vars.joinToString(", ")}. Assign values to the others first.")
         val steps = arrayListOf<String>()

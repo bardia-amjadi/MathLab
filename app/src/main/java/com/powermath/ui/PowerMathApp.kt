@@ -121,6 +121,7 @@ fun PowerMathApp(vm: CalcViewModel) {
             }
         }
         DialogHost(vm)
+        ScanHost(vm)
         vm.lastCrash?.let { trace ->
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { vm.lastCrash = null },

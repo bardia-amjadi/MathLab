@@ -17,6 +17,8 @@ object Examples {
         Example("Algebra", "Expand", "expand((x+2)^3)"),
         Example("Algebra", "Factor", "factor(x^2 - 9)"),
         Example("Inequalities", "Inequality", "x^2 - 4 < 0"),
+        Example("Algebra", "x in a denominator", "1/x + 1/2 = 3"),
+        Example("Inequalities", "Fraction inequality", "(x-1)/(x+2) >= 0"),
         Example("Inequalities", "Chained", "4 < 2 + x < 6"),
         Example("Inequalities", "Closed chain", "-1 <= 3x + 2 <= 11"),
         Example("Inequalities", "Two intervals", "1 < x^2 < 4"),

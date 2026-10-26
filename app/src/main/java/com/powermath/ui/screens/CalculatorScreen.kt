@@ -89,12 +89,13 @@ fun CalculatorScreen(vm: CalcViewModel, onCopy: (String) -> Unit, onPaste: () ->
                     { vm.setMode(when (settings.mode) { ResultMode.EXACT -> ResultMode.DECIMAL; ResultMode.DECIMAL -> ResultMode.SCIENTIFIC; ResultMode.SCIENTIFIC -> ResultMode.EXACT }) },
                     desc = "Result format. Tap to change between fraction, decimal and scientific")
                 Spacer(Modifier.weight(1f))
-                Chip("Home", { vm.screen = Screen.HOME }, desc = "Go to the Home page")
+                Chip("Scan", { vm.scan = com.powermath.viewmodel.ScanState.Choose }, desc = "Scan an expression from a photo")
                 Chip("Graph", { vm.openGraph(vm.editor.text) })
                 Chip("Tools", { vm.screen = Screen.TOOLS })
                 Box {
                     Chip("Menu ▾", { menuOpen = true }, desc = "More: history, workspace, settings")
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(text = { Text("Home") }, onClick = { menuOpen = false; vm.screen = Screen.HOME })
                         DropdownMenuItem(text = { Text("Tools: calculus, matrices, units, primes, shapes…") }, onClick = { menuOpen = false; vm.screen = Screen.TOOLS })
                         DropdownMenuItem(text = { Text("History") }, onClick = { menuOpen = false; vm.screen = Screen.HISTORY })
                         DropdownMenuItem(text = { Text("Workspace (variables & functions)") }, onClick = { menuOpen = false; vm.screen = Screen.WORKSPACE })
@@ -169,6 +170,8 @@ private fun ResultCard(vm: CalcViewModel, fmt: FormatSettings, textScale: Float,
     Column(Modifier.fillMaxWidth().padding(top = 6.dp).animateContentSize()) {
         androidx.compose.animation.AnimatedContent(
             targetState = vm.result,
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.TopEnd,
             transitionSpec = {
                 (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(240)) +
                     androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(240)) { it / 3 }) togetherWith
@@ -199,11 +202,11 @@ private fun ResultCard(vm: CalcViewModel, fmt: FormatSettings, textScale: Float,
                         )
                     }
                 }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { onCopy(lines.joinToString("\n")); vm.toast = "Result copied" }) { Text("Copy") }
-                    r.outcome.graphExpr?.let { g -> TextButton(onClick = { vm.plotFromResult(g) }) { Text("Graph") } }
-                    if (r.outcome.value != null) TextButton(onClick = { vm.onKey(KeyAction.SaveResultAsVar) }) { Text("Save as variable") }
-                    if (r.outcome.steps.isNotEmpty()) TextButton(onClick = { showSteps = true }) { Text("Steps") }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp), onClick = { onCopy(lines.joinToString("\n")); vm.toast = "Result copied" }) { Text("Copy", fontSize = 13.sp) }
+                    r.outcome.graphExpr?.let { g -> TextButton(onClick = { vm.plotFromResult(g) }) { Text("Graph", fontSize = 13.sp) } }
+                    if (r.outcome.value != null) TextButton(onClick = { vm.onKey(KeyAction.SaveResultAsVar) }) { Text("Save", fontSize = 13.sp) }
+                    if (r.outcome.steps.isNotEmpty()) TextButton(onClick = { showSteps = true }) { Text("Steps", fontSize = 13.sp) }
                 }
                 if (showSteps && r.outcome.steps.isNotEmpty()) {
                     androidx.compose.material3.AlertDialog(

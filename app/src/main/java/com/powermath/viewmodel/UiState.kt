@@ -48,3 +48,12 @@ sealed interface DialogRequest {
     data class Tool(val tool: ToolKind, val prefill: String = "") : DialogRequest
     data object ConfirmClearHistory : DialogRequest
 }
+
+/** State of the "scan an expression from a photo" flow. */
+sealed interface ScanState {
+    data object None : ScanState
+    data object Choose : ScanState
+    data object Working : ScanState
+    data class Result(val raw: String, val cleaned: String) : ScanState
+    data class Failed(val message: String) : ScanState
+}

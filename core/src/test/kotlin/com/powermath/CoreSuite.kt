@@ -50,7 +50,7 @@ object CoreSuite {
         results.clear()
         basicArithmetic(); percentAndPrecedence(); fractionsAndFormats(); scientificFunctions(); errors()
         variablesAndFunctions(); equations(); inequalities(); systems(); algebraTools(); graphTests(); editorTests(); limits()
-        autoFunctionTests(); plusMinusAndPowers(); sequenceTests(); identityTests(); geometryTests(); unitCircleAndStats(); chainTests(); advancedTests()
+        autoFunctionTests(); plusMinusAndPowers(); sequenceTests(); identityTests(); geometryTests(); unitCircleAndStats(); chainTests(); advancedTests(); rationalTests(); ocrTests()
         return results.toList()
     }
 
@@ -214,6 +214,56 @@ object CoreSuite {
             val ws = Workspace()
             calc("y := 4", ws = ws)
             eq("True", calc("y = 4", ws = ws))
+        }
+    }
+
+    private fun rationalTests() {
+        t("variables in denominators: equations") {
+            eq(listOf("x = 1/2"), lines("1/x = 2"))
+            eq(listOf("x = 2/5"), lines("1/x + 1/2 = 3"))
+            eq(listOf("x = 3"), lines("(x+1)/(x-1) = 2"))
+            eq(listOf("x = -1/2", "x = 1/2"), lines("1/x^2 = 4").take(2))
+            eq(listOf("x = 1"), lines("x + 1/x = 2").take(1))
+            eq("x = 1/4", lines("x^-1 = 4")[0])
+        }
+        t("extraneous roots are rejected") {
+            eq("No solution: every candidate makes a denominator 0", lines("x/(x-2) = 2/(x-2)")[0])
+            eq("True for every real x except where a denominator is 0", lines("5/(x-1) = 5/(x-1)")[0])
+            val steps = Calculator.process("x/(x-2) = 2/(x-2)", Workspace(), CalcSettings()).steps
+            yes(steps.any { it.contains("rejected") }, "steps mention the rejection")
+        }
+        t("variables in denominators: inequalities and chains") {
+            eq("0 < x < 1/2", lines("1/x > 2")[0])
+            eq("x < -2 or x ≥ 1", lines("(x-1)/(x+2) >= 0")[0])
+            eq("x < 0 or x > 2", lines("1/x < 1/2")[0])
+            eq("1/2 < x < 1", lines("1 < 1/x < 2")[0])
+        }
+        t("rational errors") { fails(ErrorKind.DIV_ZERO, "1/0 = x"); fails(ErrorKind.UNSUPPORTED, "1/x + 1/y = 3") }
+    }
+
+    private fun ocrTests() {
+        t("photo text becomes calculator input") {
+            eq("2*3 + 4/5", OcrCleanup.toExpression("2×3 + 4÷5"))
+            eq("x^2 - 5x + 6 = 0", OcrCleanup.toExpression("x² − 5x + 6 = 0"))
+            eq("sqrt(9) + sqrt(x+1)", OcrCleanup.toExpression("√9 + √(x+1)"))
+            eq("2pi", OcrCleanup.toExpression("2π"))
+            eq("x >= 3", OcrCleanup.toExpression("x ≥ 3"))
+            eq("2+3", OcrCleanup.toExpression("2+3 = ?"))
+            eq("4 < 2+x < 6", OcrCleanup.toExpression("4 < 2+x < 6"))
+            eq("1 * 4", OcrCleanup.toExpression("1 x 4").replace("1 * 4", "1 * 4"))
+            eq("x^10", OcrCleanup.toExpression("x¹⁰"))
+        }
+        t("misread digits and multi-line systems") {
+            eq("1005", OcrCleanup.toExpression("1O05")); eq("2011", OcrCleanup.toExpression("20l1"))
+            eq("x + y = 5; x - y = 1", OcrCleanup.toExpression("x + y = 5\nx − y = 1"))
+            eq("1 + 2 3 + 4", OcrCleanup.toExpression("1 + 2\n3 + 4"))
+            eq("", OcrCleanup.toExpression("  \n "))
+        }
+        t("cleaned photo text really evaluates") {
+            eq("x = 2", lines(OcrCleanup.toExpression("x² − 5x + 6 = 0"))[0])
+            eq("3", lines(OcrCleanup.toExpression("√9"))[0])
+            eq("2 < x < 4", lines(OcrCleanup.toExpression("4 < 2 + x < 6"))[0])
+            eq("x = 3", lines(OcrCleanup.toExpression("x + y = 5\nx − y = 1"))[0])
         }
     }
 
@@ -605,7 +655,7 @@ object CoreSuite {
             eq(listOf("x = 2"), lines("solve(x + 3 = 5)")); eq(listOf("x = 2"), lines("solve(x + 3 = 5, x)")); eq(listOf("x = 2", "x = 3", "Δ = 1"), lines("solve(x^2 - 5x + 6)"))
         }
         t("unsupported equations are rejected, not fabricated") {
-            fails(ErrorKind.UNSUPPORTED, "sin(x) = 0"); fails(ErrorKind.UNSUPPORTED, "1/x = 2"); fails(ErrorKind.UNSUPPORTED, "2^x = 8")
+            fails(ErrorKind.UNSUPPORTED, "sin(x) = 0"); fails(ErrorKind.UNSUPPORTED, "2^x = 8")
             fails(ErrorKind.UNSUPPORTED, "x + y = 3"); fails(ErrorKind.UNSUPPORTED, "x^30 = 1"); fails(ErrorKind.UNSUPPORTED, "sqrt(x) = 3")
         }
         t("numeric truth values") { eq("True", calc("2+2=4")); eq("False", calc("3<2")); eq("True", calc("sqrt(2)*sqrt(2)=2")); eq("True", calc("1/3 != 1/2")) }

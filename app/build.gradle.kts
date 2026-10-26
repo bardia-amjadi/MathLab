@@ -39,6 +39,8 @@ dependencies {
     implementation(project(":core"))
 
     implementation("androidx.core:core-ktx:1.13.1")
+    // On-device text recognition (model is bundled in the app, works offline)
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
