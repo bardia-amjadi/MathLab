@@ -1,11 +1,11 @@
-# Building Power Math
+# Building MathLab
 
 ## Option A: GitHub Actions (no Android Studio, no installs)
 
 1. Create a free GitHub account and a new repository. A public repository has unlimited free build minutes.
 2. Upload the contents of the project folder to the repository. Make sure the hidden `.github` folder is included.
    - Drag-and-drop in the browser can skip hidden folders. If `.github/workflows/build-apk.yml` is missing, choose **Add file → Create new file**, type `.github/workflows/build-apk.yml` as the name, and paste in the workflow contents.
-   - Or use git: `git init && git add -A && git commit -m "Power Math" && git remote add origin <url> && git push -u origin main`
+   - Or use git: `git init && git add -A && git commit -m "MathLab" && git remote add origin <url> && git push -u origin main`
 3. Open the **Actions** tab. If asked, click to enable workflows.
 4. Select **Build APK** on the left, then **Run workflow**. Pushing to `main` also starts it.
 5. Wait about 5 to 10 minutes. When the run is green, scroll to **Artifacts** and download **PowerMath-apk**.

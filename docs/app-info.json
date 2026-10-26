@@ -1,7 +1,7 @@
 [
   {
-    "slug": "power-math",
-    "name": "Power Math",
+    "slug": "mathlab",
+    "name": "MathLab",
     "description": "An offline scientific calculator for Android with exact fractions, equation and inequality solving (including chained comparisons), calculus, graphing, matrices, unit conversion and saved variables.",
     "category": "Education",
     "type": "App",

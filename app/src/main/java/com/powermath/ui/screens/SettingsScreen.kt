@@ -182,11 +182,11 @@ fun SettingsScreen(vm: CalcViewModel) {
             Section(14, "About") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.foundation.Image(
-                        androidx.compose.ui.res.painterResource(com.powermath.R.drawable.logo_powermath), contentDescription = "Power Math logo",
-                        modifier = Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(androidx.compose.ui.graphics.Color(0xFF03144D)).padding(6.dp)
+                        androidx.compose.ui.res.painterResource(com.powermath.R.drawable.logo_powermath), contentDescription = "MathLab logo",
+                        modifier = Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(androidx.compose.ui.graphics.Color(0xFF0D0D0D))
                     )
                     Column(Modifier.padding(start = 12.dp)) {
-                        Text("Power Math 1.2", fontWeight = FontWeight.SemiBold)
+                        Text("MathLab 1.2", fontWeight = FontWeight.SemiBold)
                         Text("Works fully offline", fontSize = 12.sp, color = cs.onSurfaceVariant)
                     }
                 }
@@ -195,12 +195,12 @@ fun SettingsScreen(vm: CalcViewModel) {
                 Spacer(Modifier.height(14.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     androidx.compose.foundation.Image(
-                        androidx.compose.ui.res.painterResource(com.powermath.R.drawable.logo_mathlab), contentDescription = "MathLab logo",
+                        androidx.compose.ui.res.painterResource(com.powermath.R.drawable.logo_cloudpixel), contentDescription = "CloudPixel logo",
                         modifier = Modifier.size(64.dp).clip(RoundedCornerShape(14.dp))
                     )
                     Column(Modifier.padding(start = 12.dp)) {
-                        Text("Powered by MathLab", fontWeight = FontWeight.SemiBold, color = cs.primary)
-                        Text("Designed & built by MathLab", fontSize = 12.sp, color = cs.onSurfaceVariant)
+                        Text("Powered by CloudPixel", fontWeight = FontWeight.SemiBold, color = cs.primary)
+                        Text("Designed & built by CloudPixel", fontSize = 12.sp, color = cs.onSurfaceVariant)
                     }
                 }
             }

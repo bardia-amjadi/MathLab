@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -55,13 +56,13 @@ import kotlin.math.sin
 
 private val SplashTop = Color(0xFF050926)      // deep navy backdrop
 private val SplashBottom = Color(0xFF0B1E5C)
-private const val TITLE = "POWER MATH"
+private const val TITLE = "MATHLAB"
 
 /**
  * Intro (about 4 s, tap to skip):
  * 1. orbiting dots and arcs fade in around the logo while the logo springs into place,
  * 2. the title appears letter by letter, followed by the tagline,
- * 3. "Powered by MathLab" rises in at the bottom while a thin progress line fills.
+ * 3. "Powered by CloudPixel" rises in at the bottom while a thin progress line fills.
  */
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
@@ -99,7 +100,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     Box(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SplashTop, SplashBottom)))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onFinished() }
-            .semantics { contentDescription = "Power Math, powered by MathLab. Tap to skip." },
+            .semantics { contentDescription = "MathLab, powered by CloudPixel. Tap to skip." },
         contentAlignment = Alignment.Center
     ) {
         Column(Modifier.fillMaxSize().padding(horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -122,8 +123,8 @@ fun SplashScreen(onFinished: () -> Unit) {
                     }
                 }
                 Image(
-                    painterResource(R.drawable.logo_powermath), contentDescription = "Power Math logo", contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(190.dp).graphicsLayer { alpha = logoAlpha.value; scaleX = logoScale.value; scaleY = logoScale.value }
+                    painterResource(R.drawable.logo_powermath), contentDescription = "MathLab logo", contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(190.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(40.dp)).graphicsLayer { alpha = logoAlpha.value; scaleX = logoScale.value; scaleY = logoScale.value }
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -146,10 +147,10 @@ fun SplashScreen(onFinished: () -> Unit) {
             ) {
                 Text("Powered by", color = Color(0xFF9DB4FF), fontSize = 13.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp)
                 Image(
-                    painterResource(R.drawable.logo_mathlab), contentDescription = "MathLab logo", contentScale = ContentScale.Fit,
+                    painterResource(R.drawable.logo_cloudpixel), contentDescription = "CloudPixel logo", contentScale = ContentScale.Fit,
                     modifier = Modifier.height(110.dp)
                 )
-                Text("MathLab", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 3.sp)
+                Text("CloudPixel", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 3.sp)
             }
             Spacer(Modifier.height(20.dp))
             Box(Modifier.widthIn(max = 220.dp).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.12f))) {

@@ -98,9 +98,9 @@ fun HomeScreen(vm: CalcViewModel) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp)) {
         Reveal(0) {
             Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Image(painterResource(R.drawable.logo_powermath), contentDescription = "Power Math logo", modifier = Modifier.size(52.dp))
+                Image(painterResource(R.drawable.logo_powermath), contentDescription = "MathLab logo", modifier = Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)))
                 Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                    Text("Power Math", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("MathLab", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text("Exact math. Fully offline.", fontSize = 12.sp, color = cs.onSurfaceVariant)
                 }
                 Chip("Settings", { vm.screen = Screen.SETTINGS }, desc = "Open settings")
@@ -174,7 +174,7 @@ fun HomeScreen(vm: CalcViewModel) {
         Reveal(7) {
             Row(Modifier.fillMaxWidth().padding(vertical = 20.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Text("Powered by ", fontSize = 12.sp, color = cs.onSurfaceVariant)
-                Text("MathLab", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = cs.primary)
+                Text("CloudPixel", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = cs.primary)
             }
         }
     }

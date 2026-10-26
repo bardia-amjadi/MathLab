@@ -1,4 +1,4 @@
-# Power Math User Guide
+# MathLab User Guide
 
 ## Result modes
 
