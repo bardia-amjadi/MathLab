@@ -26,6 +26,7 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
     // ---------------- equations ----------------
     fun solveEquation(l: Expr, r: Expr, prefer: String? = null): Outcome {
         val diff = try { poly(l, r) } catch (e: MathError) {
+            if (e.kind == ErrorKind.UNSUPPORTED && hasVarSqrt(l, r)) return solveRadical(RelOp.EQ, l, r, prefer)
             if (e.kind == ErrorKind.UNSUPPORTED && hasVarDivision(l, r)) return solveRationalEquation(l, r, prefer)
             throw e
         }
@@ -112,6 +113,7 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
     fun solveInequality(op: RelOp, l: Expr, r: Expr, prefer: String? = null): Outcome {
         if (op == RelOp.EQ) return solveEquation(l, r, prefer)
         val diff = try { poly(l, r) } catch (e: MathError) {
+            if (e.kind == ErrorKind.UNSUPPORTED && hasVarSqrt(l, r)) return solveRadical(op, l, r, prefer)
             if (e.kind == ErrorKind.UNSUPPORTED && hasVarDivision(l, r)) return solveRationalInequality(op, l, r, prefer)
             throw e
         }
@@ -295,6 +297,162 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
         return Outcome(OutcomeKind.SOLUTION, lines, steps)
     }
 
+    // ---------------- square roots of expressions containing the unknown ----------------
+    private fun hasVarSqrt(vararg es: Expr): Boolean {
+        fun walk(e: Expr): Boolean = when (e) {
+            is Expr.Call -> (e.name == "sqrt" && ExprUtil.freeVars(e.args[0]).any { scope.variable(it) == null }) || e.args.any { walk(it) }
+            is Expr.Bin -> walk(e.l) || walk(e.r)
+            is Expr.Neg -> walk(e.e)
+            is Expr.Percent -> walk(e.e)
+            else -> false
+        }
+        return es.any { walk(it) }
+    }
+
+    private class Radicals { val names = ArrayList<String>(); val radicands = ArrayList<MPoly>() }
+
+    /** (numerator, denominator) as polynomials in x and in one new symbol per distinct sqrt(...) (_r1, _r2, ...). */
+    private fun radFrac(e: Expr, rad: Radicals): Pair<MPoly, MPoly> {
+        val one = MPoly.const(Rat.ONE)
+        return when {
+            e is Expr.Call && e.name == "sqrt" && e.args.size == 1 && ExprUtil.freeVars(e.args[0]).any { scope.variable(it) == null } -> {
+                val (inn, innDen) = radFrac(e.args[0], rad)
+                if (innDen.vars().isNotEmpty() || innDen.constantValue() != Rat.ONE && innDen.isConstant.not()) throw MathError(ErrorKind.UNSUPPORTED, "A fraction under a square root is not supported")
+                val inner = if (innDen.isConstant) inn.scale(innDen.constantValue().inverse()) else inn
+                if (inner.vars().any { it.startsWith("_r") }) throw MathError(ErrorKind.UNSUPPORTED, "A square root inside another square root is not supported")
+                val idx = rad.radicands.indexOfFirst { it.terms == inner.terms }
+                val sym = if (idx >= 0) MPoly.variable(rad.names[idx]) else {
+                    if (rad.names.size >= 3) throw MathError(ErrorKind.UNSUPPORTED, "At most three different square roots are supported in one equation")
+                    rad.names.add("_r" + (rad.names.size + 1)); rad.radicands.add(inner); MPoly.variable(rad.names.last())
+                }
+                Pair(sym, one)
+            }
+            e is Expr.Neg -> radFrac(e.e, rad).let { Pair(-it.first, it.second) }
+            e is Expr.Bin && (e.op == '+' || e.op == '-') && e.r !is Expr.Percent -> {
+                val (a, b) = radFrac(e.l, rad); val (c, d) = radFrac(e.r, rad)
+                if (e.op == '+') Pair(a * d + c * b, b * d) else Pair(a * d - c * b, b * d)
+            }
+            e is Expr.Bin && e.op == '*' -> { val (a, b) = radFrac(e.l, rad); val (c, d) = radFrac(e.r, rad); Pair(a * c, b * d) }
+            e is Expr.Bin && e.op == '/' -> {
+                val (a, b) = radFrac(e.l, rad); val (c, d) = radFrac(e.r, rad)
+                if (c.isZero) throw MathError(ErrorKind.DIV_ZERO, "Division by zero")
+                Pair(a * d, b * c)
+            }
+            e is Expr.Bin && e.op == '^' -> {
+                val k = builder.build(e.r)
+                if (!k.isConstant || !k.constantValue().isInteger || k.constantValue().num.bitLength() > 5)
+                    throw MathError(ErrorKind.UNSUPPORTED, "Powers next to square roots must be whole numbers")
+                val n = k.constantValue().num.toInt()
+                val (a, b) = radFrac(e.l, rad)
+                if (n >= 0) Pair(a.pow(n), b.pow(n)) else { if (a.isZero) throw MathError(ErrorKind.DIV_ZERO, "Division by zero"); Pair(b.pow(-n), a.pow(-n)) }
+            }
+            else -> Pair(builder.build(e), one)
+        }
+    }
+
+    /** Replaces s^2 by the radicand, so every symbol appears with exponent 0 or 1. */
+    private fun reduceRad(p: MPoly, rad: Radicals): MPoly {
+        var acc = MPoly.ZERO
+        for ((mono, c) in p.terms) {
+            var factor = MPoly.const(c)
+            val keep = ArrayList<Pair<String, Int>>()
+            for ((n, ex) in mono.vars) {
+                val idx = rad.names.indexOf(n)
+                if (idx < 0) keep.add(Pair(n, ex))
+                else { factor = factor * rad.radicands[idx].pow(ex / 2); if (ex % 2 == 1) keep.add(Pair(n, 1)) }
+            }
+            acc += factor * MPoly(mapOf(Mono(keep.sortedBy { it.first }) to Rat.ONE))
+        }
+        return acc
+    }
+
+    /** Squares the roots away one at a time: A + B s = 0  gives  A^2 - B^2 p = 0. */
+    private fun eliminateRoots(p0: MPoly, rad: Radicals, steps: MutableList<String>): MPoly {
+        var cur = reduceRad(p0, rad)
+        for (i in rad.names.indices.reversed()) {
+            val name = rad.names[i]
+            if (cur.degreeIn(name) == 0) continue
+            val a = MPoly(cur.terms.filterKeys { it.exp(name) == 0 })
+            val b = MPoly(cur.terms.filterKeys { it.exp(name) == 1 }.mapKeys { (m, _) -> Mono(m.vars.filter { it.first != name }) })
+            cur = reduceRad(a * a - b * b * rad.radicands[i], rad)
+            steps.add("Isolate the square root and square both sides: ${cur.toText()} = 0")
+        }
+        return cur
+    }
+
+    private fun evalSides(l: Expr, r: Expr, v: String, x: Value): Double? = try {
+        val ev = Evaluator(scope, angle, EvalLimits(), mapOf(v to x))
+        Ops.toDouble(ev.eval(l)) - Ops.toDouble(ev.eval(r))
+    } catch (e: MathError) { null }
+
+    fun solveRadical(op: RelOp, l: Expr, r: Expr, prefer: String? = null): Outcome {
+        val rad = Radicals()
+        val (ln, ld) = radFrac(l, rad); val (rn, rd) = radFrac(r, rad)
+        val diff = ln * rd - rn * ld
+        val den = ld * rd
+        val xv = (diff.vars() + den.vars()).filter { !it.startsWith("_r") } + rad.radicands.flatMap { it.vars() }
+        val v = pickVarN(xv.toSet(), prefer) ?: throw MathError(ErrorKind.UNSUPPORTED, "Nothing to solve for")
+        val steps = arrayListOf<String>()
+        val domain = rad.radicands.map { UPoly.fromM(it, v) }
+        if (domain.isNotEmpty()) steps.add("The expression under a root must not be negative: " + domain.joinToString(", ") { it.toM(v).toText() + " ≥ 0" })
+        val n = eliminateRoots(diff, rad, steps)
+        val un = UPoly.fromM(n, v)
+        val denPoly = if (den.vars().isEmpty()) null else eliminateRoots(den, rad, ArrayList()).let { UPoly.fromM(it, v) }
+        if (denPoly != null) steps.add("Values that make a denominator 0 are excluded")
+        val roots = if (un.isZero) emptyList() else PolyRoots.realRoots(un)
+
+        if (op == RelOp.EQ) {
+            if (un.isZero) return Outcome(OutcomeKind.SOLUTION, listOf(Line.Text("True for every $v where the roots are defined (${domain.joinToString(", ") { it.toM(v).toText() + " ≥ 0" }})")), steps)
+            steps.add("Check every candidate in the original equation, because squaring can add false solutions")
+            val good = ArrayList<RealRoot>()
+            for (rt in roots) {
+                val f = evalSides(l, r, v, rt.value)
+                if (f != null && Math.abs(f) <= 1e-9 * (1.0 + Math.abs(rt.d))) good.add(rt)
+                else steps.add("$v = ${fx(rt.value)} does not satisfy the equation, so it is rejected")
+            }
+            val lines = ArrayList<Line>()
+            if (good.isEmpty()) lines.add(Line.Text("No real solutions"))
+            good.forEach { lines.add(Line.Eq(v, it.value)) }
+            if (good.any { !it.exact }) lines.add(Line.Text("Values marked ≈ are numerical approximations"))
+            return Outcome(OutcomeKind.SOLUTION, lines, steps)
+        }
+
+        // inequality: the sign of l - r can only change at roots of the squared polynomial or where a root starts to exist
+        steps.add("The sign can only change at the roots of the squared equation or at the edge of the domain")
+        class Crit(val value: Value, val d: Double)
+        val denRoots = if (denPoly != null && denPoly.degree >= 1) PolyRoots.realRoots(denPoly) else emptyList()
+        val all = (roots.map { Crit(it.value, it.d) } + denRoots.map { Crit(it.value, it.d) } + domain.filter { it.degree >= 1 }.flatMap { PolyRoots.realRoots(it).map { rt -> Crit(rt.value, rt.d) } }).sortedBy { it.d }
+        val crit = ArrayList<Crit>()
+        for (c in all) { val last = crit.lastOrNull(); if (last == null || Math.abs(last.d - c.d) >= 1e-12 * (1 + Math.abs(c.d))) crit.add(c) }
+        val k = crit.size
+        fun signOf(f: Double?): Int? = if (f == null) null else if (Math.abs(f) < 1e-9) 0 else if (f > 0) 1 else -1
+        val sat = ArrayList<Boolean>()
+        for (i in 0..k) {
+            val sample = when { k == 0 -> 0.0; i == 0 -> crit[0].d - 1.0; i == k -> crit[k - 1].d + 1.0; else -> (crit[i - 1].d + crit[i].d) / 2.0 }
+            val sg = signOf(evalSides(l, r, v, Value.D(sample)))
+            sat.add(sg != null && satisfied(op, sg))
+            if (i < k) { val pg = signOf(evalSides(l, r, v, crit[i].value)); sat.add(pg != null && satisfied(op, pg)) }
+        }
+        val ivs = ArrayList<Line.Iv>()
+        var e = 0
+        while (e < sat.size) {
+            if (!sat[e]) { e++; continue }
+            val start = e
+            while (e + 1 < sat.size && sat[e + 1]) e++
+            val end = e
+            val lo: Value? = if (start == 0) null else crit[if (start % 2 == 0) start / 2 - 1 else (start - 1) / 2].value
+            val hi: Value? = if (end == sat.size - 1) null else crit[if (end % 2 == 0) end / 2 else (end - 1) / 2].value
+            ivs.add(Line.Iv(lo, start % 2 == 1, hi, end % 2 == 1))
+            e++
+        }
+        val lines: List<Line> = when {
+            ivs.isEmpty() -> listOf(Line.Text("No real solutions"))
+            ivs.size == 1 && ivs[0].lo == null && ivs[0].hi == null -> listOf(Line.Text("All real numbers"))
+            else -> listOf(Line.IntervalSet(v, ivs))
+        }
+        return Outcome(OutcomeKind.SOLUTION, lines, steps)
+    }
+
     // ---------------- chained comparisons: 4 < 2 + x < 6 ----------------
     private fun cmpBound(a: Value, b: Value) = Ops.compare(a, b)
 
@@ -332,7 +490,9 @@ class Solver(private val scope: Scope, private val angle: AngleMode = AngleMode.
         if (ops.any { it == RelOp.EQ }) throw MathError(ErrorKind.UNSUPPORTED, "A chain can use <, ≤, >, ≥ and ≠. For equalities write separate equations.")
         val vars = (0 until ops.size).flatMap { i ->
             try { poly(terms[i], terms[i + 1]).vars() } catch (e: MathError) {
-                if (e.kind == ErrorKind.UNSUPPORTED && hasVarDivision(terms[i], terms[i + 1])) { val (n, d) = fraction(terms[i], terms[i + 1]); n.vars() + d.vars() } else throw e
+                if (e.kind == ErrorKind.UNSUPPORTED && (hasVarSqrt(terms[i], terms[i + 1]) || hasVarDivision(terms[i], terms[i + 1])))
+                    (ExprUtil.freeVars(terms[i]) + ExprUtil.freeVars(terms[i + 1])).filter { scope.variable(it) == null }.toSet()
+                else throw e
             }
         }.toSortedSet()
         var v = prefer ?: vars.firstOrNull()

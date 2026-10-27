@@ -50,7 +50,7 @@ object CoreSuite {
         results.clear()
         basicArithmetic(); percentAndPrecedence(); fractionsAndFormats(); scientificFunctions(); errors()
         variablesAndFunctions(); equations(); inequalities(); systems(); algebraTools(); graphTests(); editorTests(); limits()
-        autoFunctionTests(); plusMinusAndPowers(); sequenceTests(); identityTests(); geometryTests(); unitCircleAndStats(); chainTests(); advancedTests(); rationalTests(); ocrTests()
+        autoFunctionTests(); plusMinusAndPowers(); sequenceTests(); identityTests(); geometryTests(); unitCircleAndStats(); chainTests(); advancedTests(); rationalTests(); ocrTests(); radicalTests()
         return results.toList()
     }
 
@@ -265,6 +265,31 @@ object CoreSuite {
             eq("2 < x < 4", lines(OcrCleanup.toExpression("4 < 2 + x < 6"))[0])
             eq("x = 3", lines(OcrCleanup.toExpression("x + y = 5\nx − y = 1"))[0])
         }
+    }
+
+    private fun radicalTests() {
+        t("square roots of the unknown: equations") {
+            eq("x = 9", lines("sqrt(x) = 3")[0]); eq("x = 5", lines("sqrt(2x-1) = 3")[0])
+            eq("x = 3", lines("sqrt(x+1) = x-1")[0]); eq("x = 1", lines("sqrt(x)+sqrt(x+3) = 3")[0])
+            eq("x = 2", lines("sqrt(x+2)+sqrt(x-1) = 3")[0])
+            eq(listOf("x = 0", "x = 1"), lines("sqrt(x) = x"))
+            eq("x = (3 + √5)/2", lines("sqrt(x)+1 = x")[0].replace("sqrt(5)", "√5"))
+        }
+        t("false roots from squaring are rejected") {
+            eq("No real solutions", lines("sqrt(x) = -2")[0])
+            yes(Calculator.process("sqrt(x+1) = x-1", Workspace(), CalcSettings()).steps.any { it.contains("rejected") }, "x = 0 should be rejected")
+        }
+        t("square roots of the unknown: inequalities and chains") {
+            eq("0 ≤ x < 4", lines("sqrt(x) < 2")[0]); eq("x > 4", lines("sqrt(x) > 2")[0])
+            eq("-1 ≤ x ≤ 3", lines("sqrt(x+1) >= x-1")[0]); eq("4 < x < 9", lines("2 < sqrt(x) < 3")[0])
+        }
+        t("square roots in denominators") {
+            eq("x = 1/4", lines("1/sqrt(x) = 2")[0]); eq("x = 4", lines("1/(sqrt(x)-1) = 1")[0])
+            eq("x = 4", lines("sqrt(x)/(x-2) = 1")[0]); eq("x = 1", lines("(x+1)/sqrt(x) = 2")[0])
+            eq("0 < x < 4", lines("1/sqrt(x) > 1/2")[0]); eq("x > 1", lines("1/sqrt(x) < 1")[0])
+            eq("1/4 < x < 1", lines("1 < 1/sqrt(x) < 2")[0])
+        }
+        t("radical errors") { fails(ErrorKind.UNSUPPORTED, "sqrt(x) + sqrt(y) = 3") }
     }
 
     private fun chainTests() {
@@ -656,7 +681,7 @@ object CoreSuite {
         }
         t("unsupported equations are rejected, not fabricated") {
             fails(ErrorKind.UNSUPPORTED, "sin(x) = 0"); fails(ErrorKind.UNSUPPORTED, "2^x = 8")
-            fails(ErrorKind.UNSUPPORTED, "x + y = 3"); fails(ErrorKind.UNSUPPORTED, "x^30 = 1"); fails(ErrorKind.UNSUPPORTED, "sqrt(x) = 3")
+            fails(ErrorKind.UNSUPPORTED, "x + y = 3"); fails(ErrorKind.UNSUPPORTED, "x^30 = 1")
         }
         t("numeric truth values") { eq("True", calc("2+2=4")); eq("False", calc("3<2")); eq("True", calc("sqrt(2)*sqrt(2)=2")); eq("True", calc("1/3 != 1/2")) }
     }

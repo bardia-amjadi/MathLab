@@ -104,6 +104,35 @@ fun CalculatorScreen(vm: CalcViewModel, onCopy: (String) -> Unit, onPaste: () ->
                 }
             }
 
+
+            // ---- result actions: fixed row under the tools bar, never inside the result ----
+            var showSteps by remember { mutableStateOf(false) }
+            val res = vm.result
+            LaunchedEffect(res) { showSteps = settings.autoSteps && res is ResultState.Success && res.outcome.steps.isNotEmpty() }
+            if (res is ResultState.Success) {
+                val outLines = remember(res, settings.format) { res.outcome.render(settings.format) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Chip("Copy", { onCopy(outLines.joinToString("\n")); vm.toast = "Result copied" }, desc = "Copy the result")
+                    res.outcome.graphExpr?.let { g -> Chip("Graph result", { vm.plotFromResult(g) }, desc = "Plot the result") }
+                    if (res.outcome.value != null) Chip("Save", { vm.onKey(KeyAction.SaveResultAsVar) }, desc = "Save the result as a variable")
+                    if (res.outcome.steps.isNotEmpty()) Chip("Steps", { showSteps = true }, desc = "Show the working steps")
+                }
+                if (showSteps && res.outcome.steps.isNotEmpty()) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showSteps = false },
+                        title = { Text("Steps") },
+                        text = {
+                            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                                res.outcome.steps.forEachIndexed { i, st ->
+                                    Text("${i + 1}. $st", fontSize = 14.sp, modifier = Modifier.padding(vertical = 3.dp))
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showSteps = false }) { Text("Close") } }
+                    )
+                }
+            }
+
             // ---- display: takes all remaining space ----
             Display(vm, settings.format, settings.textSize.scale, settings.autoSteps, com.powermath.ui.theme.fontFamilyOf(settings.font), onCopy, Modifier.weight(1f).fillMaxWidth())
 
@@ -166,7 +195,6 @@ private fun Display(vm: CalcViewModel, fmt: FormatSettings, textScale: Float, au
 @Composable
 private fun ResultCard(vm: CalcViewModel, fmt: FormatSettings, textScale: Float, autoSteps: Boolean, font: androidx.compose.ui.text.font.FontFamily?, onCopy: (String) -> Unit) {
     val cs = MaterialTheme.colorScheme
-    var showSteps by remember { mutableStateOf(autoSteps) }  // steps open in a dialog, so the buttons never move or get covered
     Column(Modifier.fillMaxWidth().padding(top = 6.dp).animateContentSize()) {
         androidx.compose.animation.AnimatedContent(
             targetState = vm.result,
@@ -201,26 +229,6 @@ private fun ResultCard(vm: CalcViewModel, fmt: FormatSettings, textScale: Float,
                             modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Result: $l" }
                         )
                     }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp), onClick = { onCopy(lines.joinToString("\n")); vm.toast = "Result copied" }) { Text("Copy", fontSize = 13.sp) }
-                    r.outcome.graphExpr?.let { g -> TextButton(onClick = { vm.plotFromResult(g) }) { Text("Graph", fontSize = 13.sp) } }
-                    if (r.outcome.value != null) TextButton(onClick = { vm.onKey(KeyAction.SaveResultAsVar) }) { Text("Save", fontSize = 13.sp) }
-                    if (r.outcome.steps.isNotEmpty()) TextButton(onClick = { showSteps = true }) { Text("Steps", fontSize = 13.sp) }
-                }
-                if (showSteps && r.outcome.steps.isNotEmpty()) {
-                    androidx.compose.material3.AlertDialog(
-                        onDismissRequest = { showSteps = false },
-                        title = { Text("Steps") },
-                        text = {
-                            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                                r.outcome.steps.forEachIndexed { i, st ->
-                                    Text("${i + 1}. $st", fontSize = 14.sp, modifier = Modifier.padding(vertical = 3.dp))
-                                }
-                            }
-                        },
-                        confirmButton = { TextButton(onClick = { showSteps = false }) { Text("Close") } }
-                    )
                 }
             }
         }
